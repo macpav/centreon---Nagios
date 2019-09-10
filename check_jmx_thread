@@ -1,0 +1,40 @@
+#!/bin/bash 
+
+HOST=$1 
+PORT=$2 
+WARNING=$3
+CRITICAL=$4
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+output=$(sh /usr/lib/centreon/plugins/check_jmx -U service:jmx:rmi:///jndi/rmi://$HOST:$PORT/jmxrmi  -O java.lang:type=Threading -A ThreadCount -w $WARNING -c $CRITICAL)
+output2=$(echo $output| cut -d'=' -f 2)
+if [[ $output1 == *"non-JRMP"* ]]; then
+  echo "JMX UNKNOWN probleme de connexion 2"
+  exit $STATE_UNKNOWN
+fi
+
+if [[ $output == *"JMX WARNING"* ]]; then
+  echo $output "| thread="$output2" warning="$WARNING" critical="$CRITICAL
+  exit $STATE_CRITICAL
+fi
+if [[ $output == *"JMX OK"* ]]; then
+  echo $output "| thread="$output2" warning="$WARNING" critical="$CRITICAL
+  exit $STATE_OK
+fi		
+if [[ $output == *"UNKNOWN"* ]]; then
+    echo $output"--"
+  exit $STATE_UNKNOWN
+fi
+
+if [[ $output == *"Connection refused"* ]]; then
+  echo "JMX UNKNOWN probleme de connexion"
+  exit $STATE_UNKNOWN
+fi
+if [[ $output == *"JMX CRITICAL"*  && $output != *"Connection refused"* ]]; then
+  echo $output "| thread="$output2" warning="$WARNING" critical="$CRITICAL
+  exit $STATE_WARNING
+fi
