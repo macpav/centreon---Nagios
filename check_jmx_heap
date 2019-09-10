@@ -1,0 +1,43 @@
+#!/bin/bash 
+
+HOST=$1 
+PORT=$2 
+
+STATE_OK=0
+
+STATE_WARNING=1
+
+STATE_CRITICAL=2
+
+STATE_UNKNOWN=3
+
+output=$(sh /usr/lib/centreon/plugins/check_jmx -U service:jmx:rmi:///jndi/rmi://$HOST:$PORT/jmxrmi -O java.lang:type=Memory -A HeapMemoryUsage -K used -I HeapMemoryUsage -J used -vvvv)
+
+output2=$(echo $output| cut -d'{' -f 2)
+output3=$(echo $output2| cut -d'}' -f 1)
+output4=$(echo $output| cut -d'{' -f 1)
+
+first=${output2//;/" "}
+
+if [[ $output1 == *"non-JRMP"* ]]; then
+  echo "JMX UNKNOWN probleme de connexion 2"
+  exit $STATE_UNKNOWN
+fi
+
+if [[ $output == *"JMX WARNING"* ]]; then
+  echo $output "|"$first
+  exit $STATE_CRITICAL
+fi
+if [[ $output == *"JMX OK"* ]]; then
+  echo $output "|"$first
+  exit $STATE_OK
+fi		
+
+if [[ $output == *"Connection refused"* ]]; then
+  echo "JMX CRITICAL probleme de connexion"
+  exit $STATE_UNKNOWN
+fi
+if [[ $output == *"JMX CRITICAL"*  && $output != *"Connection refused"* ]]; then
+  echo "------"$output "|"$first
+  exit $STATE_WARNING
+fi
