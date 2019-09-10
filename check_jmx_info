@@ -1,0 +1,43 @@
+#!/bin/bash 
+#
+#
+#
+#
+
+HOST=$1 
+PORT=$2 
+
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+output1=$(sh /usr/lib/centreon/plugins/check_jmx -U service:jmx:rmi:///jndi/rmi://$HOST:$PORT/jmxrmi -O java.lang:type=Runtime -A SpecVersion)
+output2=$(sh /usr/lib/centreon/plugins/check_jmx -U service:jmx:rmi:///jndi/rmi://$HOST:$PORT/jmxrmi -O java.lang:type=Runtime -A Uptime)
+
+if [[ $output1 == *"non-JRMP"* ]]; then
+  echo "JMX UNKNOWN probleme de connexion 2"
+  exit $STATE_UNKNOWN
+fi
+
+
+if [[ $output1 == *"Connection refused"* ]]; then
+  echo "JMX UNKNOWN probleme de connexion"
+  exit $STATE_UNKNOWN
+else
+  output1=$(echo $output1| cut -d'"' -f 2)
+  output1=$(echo $output1| cut -d'"' -f 1)
+  output2=$(echo $output2| cut -d'=' -f 2)
+  seconds=`echo "scale=0;$output2/1000" | bc`
+  hours=$((seconds / 3600))
+  seconds=$((seconds % 3600))
+  minutes=$((seconds / 60))
+  seconds=$((seconds % 60))
+ # echo "$hours hour(s) $minutes minute(s) $seconds second(s)"
+  echo "version=" $output1" Uptimes="$hours"H"$minutes"M:"$seconds"S| uptimes="$hours"Heures"
+  exit $STATE_OK
+fi
+
+
+
